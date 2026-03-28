@@ -1,0 +1,115 @@
+version: "3.9"
+
+# Dokploy self-hosted compose for manual VPS deployment (Hostinger)
+# Prerequisites on the VPS (run once before `docker stack deploy`):
+#   1. docker swarm init --advertise-addr <your-vps-ip>
+#   2. docker network create --driver overlay --attachable dokploy-network
+#   3. mkdir -p /etc/dokploy/traefik/dynamic /etc/dokploy/ssh /etc/dokploy/logs \
+#              /etc/dokploy/applications /etc/dokploy/compose /etc/dokploy/certificates \
+#              /etc/dokploy/monitoring /etc/dokploy/registry /etc/dokploy/schedules \
+#              /etc/dokploy/volume-backups
+
+services:
+  dokploy:
+    image: theophiluschinomona/theochinomona.tech:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://dokploy:${POSTGRES_PASSWORD}@dokploy-postgres:5432/dokploy
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@dokploy-redis:6379
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/dokploy:/etc/dokploy
+    networks:
+      - dokploy-network
+    depends_on:
+      - dokploy-postgres
+      - dokploy-redis
+
+  dokploy-postgres:
+    image: postgres:16
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      endpoint_spec:
+        mode: dnsrr
+    environment:
+      - POSTGRES_USER=dokploy
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=dokploy
+    volumes:
+      - dokploy-postgres-data:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
+
+  dokploy-redis:
+    image: redis:7-alpine
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      endpoint_spec:
+        mode: dnsrr
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - dokploy-redis-data:/data
+    networks:
+      - dokploy-network
+
+  dokploy-traefik:
+    image: traefik:v3.6.7
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=false"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=dokploy-network"
+      - "--providers.file.directory=/etc/dokploy/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http3"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/dynamic/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/dokploy/traefik/traefik.yml:/etc/traefik/traefik.yml
+      - /etc/dokploy/traefik/dynamic:/etc/dokploy/traefik/dynamic
+    networks:
+      - dokploy-network
+
+volumes:
+  dokploy-postgres-data:
+    driver: local
+  dokploy-redis-data:
+    driver: local
+
+networks:
+  dokploy-network:
+    external: true
+    name: dokploy-network
