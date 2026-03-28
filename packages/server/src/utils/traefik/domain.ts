@@ -35,7 +35,11 @@ export const manageDomain = async (app: ApplicationNested, domain: Domain) => {
 		"web",
 	);
 
-	if (domain.https) {
+	// Cloudflare Tunnel terminates TLS at the edge and forwards plain HTTP.
+	// Never create a websecure router for tunnel-mode domains.
+	const isTunnelMode = domain.certificateType === "cloudflare-tunnel";
+
+	if (domain.https && !isTunnelMode) {
 		config.http.routers[routerNameSecure] = await createRouterConfig(
 			app,
 			domain,
@@ -147,7 +151,8 @@ export const createRouterConfig = async (
 		routerConfig.middlewares?.push(stripMiddleware);
 	}
 
-	if (entryPoint === "web" && https) {
+	// Cloudflare Tunnel handles TLS at the edge — never redirect to HTTPS internally.
+	if (entryPoint === "web" && https && certificateType !== "cloudflare-tunnel") {
 		routerConfig.middlewares = ["redirect-to-https"];
 	}
 

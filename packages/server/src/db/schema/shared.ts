@@ -12,6 +12,7 @@ export const certificateType = pgEnum("certificateType", [
 	"letsencrypt",
 	"none",
 	"custom",
+	"cloudflare-tunnel",
 ]);
 
 export const triggerType = pgEnum("triggerType", ["push", "tag"]);

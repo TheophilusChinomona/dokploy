@@ -29,18 +29,19 @@ export const initializeRedis = async () => {
 				Replicas: 1,
 			},
 		},
-		...(process.env.NODE_ENV === "development" && {
-			EndpointSpec: {
-				Ports: [
-					{
-						TargetPort: 6379,
-						PublishedPort: 6379,
-						Protocol: "tcp",
-						PublishMode: "host",
-					},
-				],
-			},
-		}),
+		EndpointSpec:
+			process.env.NODE_ENV === "development"
+				? {
+						Ports: [
+							{
+								TargetPort: 6379,
+								PublishedPort: 6379,
+								Protocol: "tcp",
+								PublishMode: "host",
+							},
+						],
+					}
+				: { Mode: "dnsrr" },
 	};
 	try {
 		await pullImage(imageName);

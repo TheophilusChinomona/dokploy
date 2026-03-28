@@ -18,7 +18,7 @@ export const domain = z
 			.max(65535, { message: "Port must be 65535 or below" })
 			.optional(),
 		https: z.boolean().optional(),
-		certificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
+		certificateType: z.enum(["letsencrypt", "none", "custom", "cloudflare-tunnel"]).optional(),
 		customCertResolver: z.string(),
 	})
 	.superRefine((input, ctx) => {
@@ -80,7 +80,7 @@ export const domainCompose = z
 			.max(65535, { message: "Port must be 65535 or below" })
 			.optional(),
 		https: z.boolean().optional(),
-		certificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
+		certificateType: z.enum(["letsencrypt", "none", "custom", "cloudflare-tunnel"]).optional(),
 		customCertResolver: z.string(),
 		serviceName: z.string().min(1, { message: "Service name is required" }),
 	})

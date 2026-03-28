@@ -111,6 +111,18 @@ export const initializeStandaloneTraefik = async ({
 		await docker.createContainer(settings);
 		const newContainer = docker.getContainer(containerName);
 		await newContainer.start();
+		// Traefik runs as a plain container (not a Swarm service) so it must be
+		// connected to both dokploy-network (to reach app containers) and the
+		// default bridge network (to reach host-networked services such as the
+		// Dokploy panel on port 3000). Without bridge, routes like dokploy:3000
+		// break after every container recreation.
+		try {
+			const bridgeNetwork = docker.getNetwork("bridge");
+			await bridgeNetwork.connect({ Container: containerName });
+			console.log("Traefik connected to bridge network ✅");
+		} catch (_) {
+			// Already connected or bridge unavailable — non-fatal
+		}
 		console.log("Traefik Started ✅");
 	} catch (error) {
 		console.log("Traefik Not Found: Starting ", error);
@@ -243,11 +255,9 @@ export const createDefaultServerTraefikConfig = () => {
 
 	const yamlStr = stringify(config);
 	mkdirSync(DYNAMIC_TRAEFIK_PATH, { recursive: true });
-	writeFileSync(
-		path.join(DYNAMIC_TRAEFIK_PATH, `${appName}.yml`),
-		yamlStr,
-		"utf8",
-	);
+	const configPath = path.join(DYNAMIC_TRAEFIK_PATH, `${appName}.yml`);
+	writeFileSync(configPath, yamlStr, "utf8");
+	chmodSync(configPath, "644");
 };
 
 export const getDefaultTraefikConfig = () => {
@@ -430,4 +440,5 @@ export const createDefaultMiddlewares = () => {
 	const yamlStr = getDefaultMiddlewares();
 	mkdirSync(DYNAMIC_TRAEFIK_PATH, { recursive: true });
 	writeFileSync(middlewaresPath, yamlStr, "utf8");
+	chmodSync(middlewaresPath, "644");
 };

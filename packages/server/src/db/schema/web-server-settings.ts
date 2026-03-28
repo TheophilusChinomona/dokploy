@@ -121,7 +121,7 @@ const createSchema = createInsertSchema(webServerSettings, {
 
 export const apiUpdateWebServerSettings = createSchema.partial().extend({
 	serverIp: z.string().optional(),
-	certificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
+	certificateType: z.enum(["letsencrypt", "none", "custom", "cloudflare-tunnel"]).optional(),
 	https: z.boolean().optional(),
 	host: z.string().optional(),
 	letsEncryptEmail: z.string().email().optional().nullable(),
@@ -160,7 +160,7 @@ export const apiUpdateWebServerSettings = createSchema.partial().extend({
 export const apiAssignDomain = z
 	.object({
 		host: z.string(),
-		certificateType: z.enum(["letsencrypt", "none", "custom"]),
+		certificateType: z.enum(["letsencrypt", "none", "custom", "cloudflare-tunnel"]),
 		letsEncryptEmail: z
 			.union([z.string().email(), z.literal("")])
 			.optional()

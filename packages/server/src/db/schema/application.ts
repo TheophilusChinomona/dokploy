@@ -363,7 +363,7 @@ const createSchema = createInsertSchema(applications, {
 	previewLimit: z.number().optional(),
 	previewHttps: z.boolean().optional(),
 	previewPath: z.string().optional(),
-	previewCertificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
+	previewCertificateType: z.enum(["letsencrypt", "none", "custom", "cloudflare-tunnel"]).optional(),
 	previewRequireCollaboratorPermissions: z.boolean().optional(),
 	watchPaths: z.array(z.string()).optional().optional(),
 	previewLabels: z.array(z.string()).optional(),
